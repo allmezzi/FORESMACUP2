@@ -1,170 +1,173 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Form Pendaftaran</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin:auto; }
-    label { display:block; margin-top:10px; }
-    select, input { width:100%; padding:8px; margin-top:5px; }
-    button { margin-top:15px; padding:10px 20px; }
-    #deviceBox { margin-top:20px; font-size:0.9em; color:#333; background:#f5f5f5; padding:10px; border-radius:6px; }
-    #warningBox { margin-top:10px; color:red; font-weight:bold; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Pendaftaran Acara</title>
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- FontAwesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+.card { max-width: 600px; margin:auto; padding:20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+#deviceBox { margin-top:10px; font-size:0.85rem; color:#555; }
+#warningBox { margin-top:10px; color:red; font-weight:bold; }
+/* Modal spinner overlay */
+#modalSpinner { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center; flex-direction:column; }
+#modalSpinner .spinner-border { color:#fff; width:3rem; height:3rem; }
+</style>
 </head>
 <body>
-  <h2>Form Pendaftaran Acara</h2>
-  <form id="mainForm">
-    <label>Email Address <input type="email" name="email" required></label>
-    <label>Nama Lengkap <input type="text" name="nama" required></label>
-    <label>Instansi/OPD <select name="instansi"></select></label>
-    <label>Status Kepegawaian 
-      <select name="status" id="statusSelect"></select>
-    </label>
-    <label>NIP <input type="text" name="nip" id="nipField"></label>
-    <label>Usia <select name="usia"></select></label>
-    <label>Jabatan <select name="jabatan"></select></label>
-    <label>Nomor HP/WA <input type="text" name="hp"></label>
-    <label>Jenis Kelamin <select name="gender"></select></label>
-    <label>Nama Acara <select name="acara"></select></label>
-    <button type="submit">Submit</button>
-	
-	<div id="spinner" style="display:none; text-align:center; margin-bottom:15px;">
-	  <div style="display:inline-block; width:40px; height:40px; border:4px solid #ccc; border-top-color:#1d72b8; border-radius:50%; animation:spin 1s linear infinite;"></div>
-	  <div>Loading...</div>
-	</div>
 
-	<style>
-	@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-	</style>
+<div class="card">
+<h3 class="mb-4 text-center">Form Pendaftaran Acara</h3>
 
-	
-  </form>
+<div id="result"></div>
+<div id="warningBox"></div>
+<div id="deviceBox"></div>
 
-  <div id="result"></div>
-  <div id="deviceBox">🔄 Memuat Device ID...</div>
-  <div id="warningBox"></div>
+<form id="mainForm" class="row g-3">
+  <div class="col-12"><label class="form-label">Email Address</label><input type="email" class="form-control" name="email" required></div>
+  <div class="col-12"><label class="form-label">Nama Lengkap</label><input type="text" class="form-control" name="nama" required></div>
+  <div class="col-12"><label class="form-label">Instansi/OPD</label><select name="instansi" class="form-select"></select></div>
+  <div class="col-12"><label class="form-label">Status Kepegawaian</label><select name="status" id="statusSelect" class="form-select"></select></div>
+  <div class="col-12"><label class="form-label">NIP</label><input type="text" name="nip" id="nipField" class="form-control"></div>
+  <div class="col-12 col-md-6"><label class="form-label">Usia</label><select name="usia" class="form-select"></select></div>
+  <div class="col-12 col-md-6"><label class="form-label">Jabatan</label><select name="jabatan" class="form-select"></select></div>
+  <div class="col-12"><label class="form-label">Nomor HP/WA</label><input type="text" name="hp" class="form-control"></div>
+  <div class="col-12"><label class="form-label">Jenis Kelamin</label><select name="gender" class="form-select"></select></div>
+  <div class="col-12"><label class="form-label">Nama Acara</label><select name="acara" class="form-select"></select></div>
+  <div class="col-12 text-center mt-3"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Submit</button></div>
+</form>
+</div>
 
-  <script>
-      const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
-      
-      async function loadOptions() {
-		  const spinner = document.getElementById("spinner");
-		  spinner.style.display = "block"; // tampilkan spinner
+<!-- Modal Spinner -->
+<div id="modalSpinner" class="d-flex">
+  <div class="spinner-border" role="status"></div>
+  <div class="text-white mt-2">Loading...</div>
+</div>
 
-		  try {
-			const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
-			const data = await res.json();
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-			function setOptions(name, arr) {
-			  const sel = document.querySelector(`[name='${name}']`);
-			  if (!sel) return;
-			  sel.innerHTML = "<option value=''>-- Pilih --</option>";
-			  arr.forEach(v => { 
-				const o = document.createElement("option"); 
-				o.value = v; 
-				o.textContent = v; 
-				sel.appendChild(o); 
-			  });
-			}
+<script>
+const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
+const spinner = document.getElementById("modalSpinner");
+const resultBox = document.getElementById("result");
+const warningBox = document.getElementById("warningBox");
 
-			setOptions("instansi", data.instansi || []);
-			setOptions("status", data.status || []);
-			setOptions("usia", data.usia || []);
-			setOptions("jabatan", data.jabatan || []);
-			setOptions("gender", data.gender || []);
-			setOptions("acara", data.acara || []);
+function showSpinner(){ spinner.style.display="flex"; }
+function hideSpinner(){ spinner.style.display="none"; }
 
-		  } catch (err) {
-			document.getElementById("result").textContent = "Gagal memuat opsi: " + err;
-		  } finally {
-			spinner.style.display = "none"; // sembunyikan spinner
-		  }
-		}
-      
-      async function sha256(message) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,"0")).join("");
-      }
-      
-      async function checkDeviceToday(deviceID) {
-        try {
-          const res = await fetch(apiUrl + "?action=checkDevice&deviceID=" + encodeURIComponent(deviceID));
-          const data = await res.json();
-          if (data.used) {
-            document.getElementById("warningBox").textContent = "⚠️ Device ini sudah melakukan input hari ini.";
-            document.querySelectorAll("#mainForm input, #mainForm select, #mainForm button").forEach(el=>el.disabled=true);
-          }
-          return data.used;
-        } catch(err){
-          console.error("checkDevice error:", err);
-          return false;
-        }
-      }
-      
-      async function getFingerprint() {
-        const userAgent = navigator.userAgent;
-        const screenRes = `${screen.width}x${screen.height}`;
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const language = navigator.language;
-      
-        let ip = "N/A";
-        try {
-          let res = await fetch("https://api.ipify.org?format=json");
-          ip = (await res.json()).ip;
-        } catch(e){ console.warn("Gagal ambil IP:", e); }
-      
-        const raw = `${userAgent}|${screenRes}|${timezone}|${language}|${ip}`;
-        const deviceID = await sha256(raw);
-        document.getElementById("deviceBox").textContent = `Device ID: ${deviceID} | IP: ${ip}`;
-        checkDeviceToday(deviceID);
-        return { deviceID, ip };
-      }
-      
-      document.getElementById("mainForm").addEventListener("submit", async e => {
-		  e.preventDefault();
-		  const spinner = document.getElementById("spinner");
-		  spinner.style.display = "block"; // tampilkan spinner saat submit
+// SHA-256 helper
+async function sha256(msg){
+  const buf = new TextEncoder().encode(msg);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 
-		  const formData = Object.fromEntries(new FormData(e.target).entries());
-		  const fp = await getFingerprint();
-		  formData.deviceID = fp.deviceID;
-		  formData.ip = fp.ip;
+// Helper fetch with timeout
+async function fetchWithTimeout(url, options={}, timeout=5000){
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject)=>setTimeout(()=>reject("Request timeout"), timeout))
+  ]);
+}
 
-		  try {
-			const res = await fetch(apiUrl, {
-			  method: "POST",
-			  body: JSON.stringify(formData)
-			});
-			const result = await res.json();
-			document.getElementById("result").textContent = result.message;
+// Check device
+async function checkDeviceToday(deviceID){
+  try {
+    const res = await fetchWithTimeout(`${apiUrl}?action=checkDevice&deviceID=${encodeURIComponent(deviceID)}`);
+    const data = await res.json();
+    if(data.used){
+      warningBox.textContent = "⚠️ Device ini sudah melakukan input hari ini.";
+      document.querySelectorAll("#mainForm input,#mainForm select,#mainForm button").forEach(el=>el.disabled=true);
+    }
+    return data.used;
+  } catch(err){
+    console.warn("checkDeviceToday error:", err);
+    return false;
+  }
+}
 
-			if (result.status === "success") {
-			  e.target.reset();
-			  setTimeout(() => { location.reload(); }, 500);
-			}
+// Get fingerprint + deviceID + IP
+async function getFingerprint(){
+  showSpinner();
+  try{
+    const ua = navigator.userAgent;
+    const screenRes = `${screen.width}x${screen.height}`;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const lang = navigator.language;
+    let ip = "N/A";
+    try{
+      ip = (await (await fetchWithTimeout("https://api.ipify.org?format=json")).json()).ip;
+    }catch(e){ console.warn("Gagal ambil IP:", e); }
+    const raw = `${ua}|${screenRes}|${tz}|${lang}|${ip}`;
+    const deviceID = await sha256(raw);
+    document.getElementById("deviceBox").textContent = `Device ID: ${deviceID} | IP: ${ip}`;
+    await checkDeviceToday(deviceID);
+    return {deviceID, ip};
+  } finally { hideSpinner(); }
+}
 
-		  } catch (err) {
-			document.getElementById("result").textContent = "Error saat submit: " + err;
-
-		  } finally {
-			spinner.style.display = "none"; // sembunyikan spinner
-		  }
-		});
-      
-      document.addEventListener("change", e=>{
-        if(e.target.id==="statusSelect"){
-          const nipField = document.getElementById("nipField");
-          nipField.disabled = (e.target.value.toLowerCase()==="honorer");
-          if(nipField.disabled) nipField.value="";
-        }
+// Load dropdown options
+async function loadOptions(){
+  showSpinner();
+  try{
+    const res = await fetchWithTimeout(`${apiUrl}?action=getOptions`, {cache:"no-store"});
+    const data = await res.json();
+    ["instansi","status","usia","jabatan","gender","acara"].forEach(name=>{
+      const sel = document.querySelector(`[name='${name}']`);
+      if(!sel) return;
+      sel.innerHTML = "<option value=''>-- Pilih --</option>";
+      (data[name]||[]).forEach(v=>{
+        const o = document.createElement("option");
+        o.value=v; o.textContent=v;
+        sel.appendChild(o);
       });
-      
-      loadOptions();
-      getFingerprint();
-  </script>
+    });
+  }catch(err){ resultBox.textContent="Gagal load dropdown: "+err; }
+  finally{ hideSpinner(); }
+}
+
+// Submit handler
+document.getElementById("mainForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  showSpinner();
+  const formData = Object.fromEntries(new FormData(e.target).entries());
+  const fp = await getFingerprint();
+  formData.deviceID = fp.deviceID;
+  formData.ip = fp.ip;
+
+  // re-check device before POST
+  if(await checkDeviceToday(fp.deviceID)){ hideSpinner(); return; }
+
+  try{
+    const res = await fetchWithTimeout(apiUrl, {method:"POST", body:JSON.stringify(formData)});
+    const data = await res.json();
+    resultBox.textContent = data.message;
+    if(data.status==="success"){ e.target.reset(); setTimeout(()=>location.reload(),500); }
+  }catch(err){ resultBox.textContent="Error saat submit: "+err; }
+  finally{ hideSpinner(); }
+});
+
+// Disable NIP jika honorer
+document.getElementById("statusSelect").addEventListener("change", e=>{
+  const nip = document.getElementById("nipField");
+  nip.disabled = (e.target.value.toLowerCase()==="honorer");
+  if(nip.disabled) nip.value="";
+});
+
+// Initial load
+(async ()=>{
+  await loadOptions();
+  await getFingerprint();
+})();
+</script>
 
 </body>
 </html>
