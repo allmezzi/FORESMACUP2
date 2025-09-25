@@ -61,50 +61,63 @@
         <div id="warningBox"></div>
         <div id="deviceBox"></div>
         <form id="mainForm" class="row g-3">
-            <div class="col-12">
-                <label class="form-label">Email Address</label>
-                <input type="email" class="form-control" name="email" required>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Nama Lengkap</label>
-                <input type="text" class="form-control" name="nama" required>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Instansi/OPD</label>
-                <select name="instansi" class="form-select"></select>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Status Kepegawaian</label>
-                <select name="status" id="statusSelect" class="form-select"></select>
-            </div>
-            <div class="col-12">
-                <label class="form-label">NIP</label>
-                <input type="text" name="nip" id="nipField" class="form-control">
-            </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label">Usia</label>
-                <select name="usia" class="form-select"></select>
-            </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label">Jabatan</label>
-                <select name="jabatan" class="form-select"></select>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Nomor HP/WA</label>
-                <input type="text" name="hp" class="form-control">
-            </div>
-            <div class="col-12">
-                <label class="form-label">Jenis Kelamin</label>
-                <select name="gender" class="form-select"></select>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Nama Acara</label>
-                <select name="acara" class="form-select"></select>
-            </div>
-            <div class="col-12 text-center mt-3">
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Submit</button>
-            </div>
-        </form>
+		  <div class="col-12">
+			<label class="form-label">Email Address</label>
+			<input type="email" class="form-control" name="email" required>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">Nama Lengkap</label>
+			<input type="text" class="form-control" name="nama" required>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">Instansi/OPD</label>
+			<select name="instansi" class="form-select" required></select>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">Status Kepegawaian</label>
+			<select name="status" id="statusSelect" class="form-select" required></select>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">NIP</label>
+			<input type="text" name="nip" id="nipField" class="form-control">
+		  </div>
+
+		  <div class="col-12 col-md-6">
+			<label class="form-label">Usia</label>
+			<select name="usia" class="form-select" required></select>
+		  </div>
+
+		  <div class="col-12 col-md-6">
+			<label class="form-label">Jabatan</label>
+			<select name="jabatan" class="form-select" required></select>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">Nomor HP/WA</label>
+			<input type="text" name="hp" class="form-control" required>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">Jenis Kelamin</label>
+			<select name="gender" class="form-select" required></select>
+		  </div>
+
+		  <div class="col-12">
+			<label class="form-label">Nama Acara</label>
+			<select name="acara" class="form-select" required></select>
+		  </div>
+
+		  <div class="col-12 text-center mt-3">
+			<button type="submit" class="btn btn-primary">
+			  <i class="fa-solid fa-paper-plane"></i> Submit
+			</button>
+		  </div>
+		</form>
+
     </div>
     <div id="modalSpinner">
 		<div class="spinner-border" role="status"></div>
@@ -168,6 +181,34 @@
                 return false;
             }
         }
+		document.getElementById("mainForm").addEventListener("submit", async e=>{
+			e.preventDefault();
+			showSpinner();
+			const formData = Object.fromEntries(new FormData(e.target).entries());
+			const fp = await getFingerprint();
+			formData.deviceID = fp.deviceID;
+			formData.ip = fp.ip;
+
+			// re-check device before POST
+			if(await checkDeviceToday(fp.deviceID)){
+				hideSpinner();
+				return;
+			}
+			try{
+				const res = await fetchWithTimeout(apiUrl, {method:"POST", body:JSON.stringify(formData)});
+				const data = await res.json();
+				resultBox.textContent = data.message;
+				if(data.status==="success"){
+					e.target.reset();
+					setTimeout(()=>location.reload(),3000);
+				}
+			}catch(err){
+				resultBox.textContent="Error saat submit: "+err;
+			}finally{
+				hideSpinner();
+			}
+		});
+
 
         // Get fingerprint + deviceID + IP
         async function getFingerprint() {
@@ -256,10 +297,19 @@
         });
 
         // Disable NIP jika honorer
-        statusSelect.addEventListener("change", e => {
-            nipField.disabled = (e.target.value.toLowerCase() === "honorer");
-            if (nipField.disabled) nipField.value = "";
-        });
+        document.getElementById("statusSelect").addEventListener("change", e => {
+		  const nip = document.getElementById("nipField");
+		  const status = e.target.value.toLowerCase();
+
+		  if (status === "honorer") {
+			nip.disabled = true;       // tidak bisa diisi
+			nip.removeAttribute("required"); 
+			nip.value = "";            // kosongkan
+		  } else {
+			nip.disabled = false;      // bisa diisi
+			nip.setAttribute("required", "required"); 
+		  }
+		});
 
         // Initial load
         loadOptionsAndCheckDevice();
