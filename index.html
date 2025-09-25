@@ -1,84 +1,73 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Form Pendaftaran</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    form { max-width: 400px; margin: auto; }
-    input, select, button { width: 100%; padding: 8px; margin: 6px 0; }
-    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-    button:hover { background: #45a049; }
-    #result { margin-top: 15px; font-weight: bold; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin:auto; }
+    label { display:block; margin-top:10px; }
+    select, input { width:100%; padding:8px; margin-top:5px; }
+    button { margin-top:15px; padding:10px 20px; }
   </style>
 </head>
 <body>
-
-  <h2>Form Pendaftaran</h2>
-  <form id="formData">
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="text" id="nama" placeholder="Nama" required>
-    <input type="text" id="instansi" placeholder="Instansi">
-    <input type="text" id="status" placeholder="Status">
-    <input type="text" id="nip" placeholder="NIP">
-    <input type="number" id="usia" placeholder="Usia">
-    <input type="text" id="jabatan" placeholder="Jabatan">
-    <input type="text" id="hp" placeholder="Nomor HP">
-    <select id="gender">
-      <option value="">-- Pilih Gender --</option>
-      <option value="Laki-laki">Laki-laki</option>
-      <option value="Perempuan">Perempuan</option>
-    </select>
-    <input type="text" id="acara" placeholder="Nama Acara">
-    <button type="submit">Kirim</button>
+  <h2>Form Pendaftaran Acara</h2>
+  <form id="mainForm">
+    <label>Email Address <input type="email" name="email" required></label>
+    <label>Nama Lengkap <input type="text" name="nama" required></label>
+    <label>Instansi/OPD <select name="instansi"></select></label>
+    <label>Status Kepegawaian <select name="status"></select></label>
+    <label>NIP <input type="text" name="nip"></label>
+    <label>Usia <select name="usia"></select></label>
+    <label>Jabatan <select name="jabatan"></select></label>
+    <label>Nomor HP/WA <input type="text" name="hp"></label>
+    <label>Jenis Kelamin <select name="gender"></select></label>
+    <label>Nama Acara <select name="acara"></select></label>
+    <button type="submit">Submit</button>
   </form>
-
   <div id="result"></div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbxYv9n-DM9R8EqCxyFZwfG8cdp06limAhsxPh_kNgrkXAWc9dP7IsQofHbgO8oWNpz3/exec"; // ganti URL Apps Script kamu
+    const apiUrl = "https://script.google.com/macros/s/AKfycbxYv9n-DM9R8EqCxyFZwfG8cdp06limAhsxPh_kNgrkXAWc9dP7IsQofHbgO8oWNpz3/exec"; // ganti dengan link WebApp deploy
 
-    // Generate pseudo-deviceID (disimpan di localStorage supaya konsisten)
-    function getDeviceID() {
-      let id = localStorage.getItem("deviceID");
-      if (!id) {
-        id = "dev-" + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem("deviceID", id);
-      }
-      return id;
-    }
+    async function loadOptions() {
+      const res = await fetch(apiUrl + "?action=getOptions");
+      const data = await res.json();
 
-    document.getElementById("formData").addEventListener("submit", async function(e) {
-      e.preventDefault();
-
-      const data = {
-        deviceID: getDeviceID(),
-        email: document.getElementById("email").value,
-        nama: document.getElementById("nama").value,
-        instansi: document.getElementById("instansi").value,
-        status: document.getElementById("status").value,
-        nip: document.getElementById("nip").value,
-        usia: document.getElementById("usia").value,
-        jabatan: document.getElementById("jabatan").value,
-        hp: document.getElementById("hp").value,
-        gender: document.getElementById("gender").value,
-        acara: document.getElementById("acara").value
+      const setOptions = (name, arr) => {
+        const select = document.querySelector(`[name='${name}']`);
+        arr.forEach(val => {
+          const opt = document.createElement("option");
+          opt.value = val;
+          opt.textContent = val;
+          select.appendChild(opt);
+        });
       };
 
-      try {
-        let res = await fetch(scriptURL, {
-          method: "POST",
-          body: JSON.stringify(data),
-          headers: { "Content-Type": "application/json" }
-        });
-        let result = await res.json();
-        document.getElementById("result").innerHTML = result.message;
-      } catch (err) {
-        document.getElementById("result").innerHTML = "❌ Error kirim data: " + err;
-      }
-    });
-  </script>
+      setOptions("instansi", data.instansi);
+      setOptions("status", data.status);
+      setOptions("usia", data.usia);
+      setOptions("jabatan", data.jabatan);
+      setOptions("gender", data.gender);
+      setOptions("acara", data.acara);
+    }
 
+    document.getElementById("mainForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const formData = Object.fromEntries(new FormData(e.target).entries());
+
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        body: JSON.stringify(formData)
+      });
+
+      const result = await res.json();
+      document.getElementById("result").textContent = result.message;
+      if (result.status === "success") e.target.reset();
+    });
+
+    loadOptions();
+  </script>
 </body>
 </html>
