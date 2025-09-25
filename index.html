@@ -29,6 +29,17 @@
     <label>Jenis Kelamin <select name="gender"></select></label>
     <label>Nama Acara <select name="acara"></select></label>
     <button type="submit">Submit</button>
+	
+	<div id="spinner" style="display:none; text-align:center; margin-bottom:15px;">
+	  <div style="display:inline-block; width:40px; height:40px; border:4px solid #ccc; border-top-color:#1d72b8; border-radius:50%; animation:spin 1s linear infinite;"></div>
+	  <div>Loading...</div>
+	</div>
+
+	<style>
+	@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+	</style>
+
+	
   </form>
 
   <div id="result"></div>
@@ -39,25 +50,38 @@
       const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
       
       async function loadOptions() {
-        try {
-          const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
-          const data = await res.json();
-          function setOptions(name, arr) {
-            const sel = document.querySelector(`[name='${name}']`);
-            if (!sel) return;
-            sel.innerHTML = "<option value=''>-- Pilih --</option>";
-            arr.forEach(v => { const o = document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
-          }
-          setOptions("instansi", data.instansi || []);
-          setOptions("status", data.status || []);
-          setOptions("usia", data.usia || []);
-          setOptions("jabatan", data.jabatan || []);
-          setOptions("gender", data.gender || []);
-          setOptions("acara", data.acara || []);
-        } catch(err){
-          document.getElementById("result").textContent = "Gagal memuat opsi: " + err;
-        }
-      }
+		  const spinner = document.getElementById("spinner");
+		  spinner.style.display = "block"; // tampilkan spinner
+
+		  try {
+			const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
+			const data = await res.json();
+
+			function setOptions(name, arr) {
+			  const sel = document.querySelector(`[name='${name}']`);
+			  if (!sel) return;
+			  sel.innerHTML = "<option value=''>-- Pilih --</option>";
+			  arr.forEach(v => { 
+				const o = document.createElement("option"); 
+				o.value = v; 
+				o.textContent = v; 
+				sel.appendChild(o); 
+			  });
+			}
+
+			setOptions("instansi", data.instansi || []);
+			setOptions("status", data.status || []);
+			setOptions("usia", data.usia || []);
+			setOptions("jabatan", data.jabatan || []);
+			setOptions("gender", data.gender || []);
+			setOptions("acara", data.acara || []);
+
+		  } catch (err) {
+			document.getElementById("result").textContent = "Gagal memuat opsi: " + err;
+		  } finally {
+			spinner.style.display = "none"; // sembunyikan spinner
+		  }
+		}
       
       async function sha256(message) {
         const msgBuffer = new TextEncoder().encode(message);
@@ -99,18 +123,36 @@
         return { deviceID, ip };
       }
       
-      document.getElementById("mainForm").addEventListener("submit", async e=>{
-        e.preventDefault();
-        const formData = Object.fromEntries(new FormData(e.target).entries());
-        const fp = await getFingerprint();
-        formData.deviceID = fp.deviceID;
-        formData.ip = fp.ip;
-      
-        const res = await fetch(apiUrl, { method:"POST", body:JSON.stringify(formData) });
-        const result = await res.json();
-        document.getElementById("result").textContent = result.message;
-        if(result.status==="success") e.target.reset();
-      });
+      document.getElementById("mainForm").addEventListener("submit", async e => {
+		  e.preventDefault();
+		  const spinner = document.getElementById("spinner");
+		  spinner.style.display = "block"; // tampilkan spinner saat submit
+
+		  const formData = Object.fromEntries(new FormData(e.target).entries());
+		  const fp = await getFingerprint();
+		  formData.deviceID = fp.deviceID;
+		  formData.ip = fp.ip;
+
+		  try {
+			const res = await fetch(apiUrl, {
+			  method: "POST",
+			  body: JSON.stringify(formData)
+			});
+			const result = await res.json();
+			document.getElementById("result").textContent = result.message;
+
+			if (result.status === "success") {
+			  e.target.reset();
+			  setTimeout(() => { location.reload(); }, 500);
+			}
+
+		  } catch (err) {
+			document.getElementById("result").textContent = "Error saat submit: " + err;
+
+		  } finally {
+			spinner.style.display = "none"; // sembunyikan spinner
+		  }
+		});
       
       document.addEventListener("change", e=>{
         if(e.target.id==="statusSelect"){
