@@ -78,5 +78,36 @@
 
     loadOptions();
   </script>
+  <script>
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    
+    async function getFingerprint() {
+      const userAgent = navigator.userAgent;
+      const screenRes = `${screen.width}x${screen.height}`;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const language = navigator.language;
+    
+      let ip = "N/A";
+      try {
+        let res = await fetch("https://api.ipify.org?format=json");
+        let data = await res.json();
+        ip = data.ip;
+      } catch (e) {
+        console.warn("Gagal ambil IP:", e);
+      }
+    
+      const raw = `${userAgent}|${screenRes}|${timezone}|${language}|${ip}`;
+      return { 
+        deviceID: await sha256(raw), 
+        ip 
+      };
+    }
+    </script>
+
 </body>
 </html>
