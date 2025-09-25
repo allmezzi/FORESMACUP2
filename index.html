@@ -9,6 +9,7 @@
     label { display:block; margin-top:10px; }
     select, input { width:100%; padding:8px; margin-top:5px; }
     button { margin-top:15px; padding:10px 20px; }
+    #deviceInfo { margin-top: 15px; font-size: 14px; color: #333; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -17,8 +18,8 @@
     <label>Email Address <input type="email" name="email" required></label>
     <label>Nama Lengkap <input type="text" name="nama" required></label>
     <label>Instansi/OPD <select name="instansi"></select></label>
-    <label>Status Kepegawaian <select name="status"></select></label>
-    <label>NIP <input type="text" name="nip"></label>
+    <label>Status Kepegawaian <select name="status" id="statusSelect"></select></label>
+    <label>NIP <input type="text" name="nip" id="nipField"></label>
     <label>Usia <select name="usia"></select></label>
     <label>Jabatan <select name="jabatan"></select></label>
     <label>Nomor HP/WA <input type="text" name="hp"></label>
@@ -26,20 +27,17 @@
     <label>Nama Acara <select name="acara"></select></label>
     <button type="submit">Submit</button>
   </form>
+
   <div id="result"></div>
+  <div id="deviceInfo"></div> <!-- 🔹 tempat tampilkan Device ID -->
 
   <script>
-    // 🔹 Ganti dengan URL Web App Google Apps Script kamu
-    const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
+    const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec"; 
 
-    // Load dropdown options
     async function loadOptions() {
       try {
         const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
-        const text = await res.text();
-        console.log("RAW response for getOptions:", text);
-        const data = JSON.parse(text);
-
+        const data = await res.json();
         function setOptions(name, arr) {
           const sel = document.querySelector(`[name='${name}']`);
           if (!sel) return;
@@ -50,7 +48,6 @@
             sel.appendChild(o);
           });
         }
-
         setOptions("instansi", data.instansi || []);
         setOptions("status", data.status || []);
         setOptions("usia", data.usia || []);
@@ -63,67 +60,75 @@
       }
     }
 
-    // SHA256 helper
-    async function sha256(message) {
-      try {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-      } catch (e) {
-        console.error("Hash error:", e);
-        return "HASH_ERROR";
-      }
-    }
-
-    // Buat fingerprint
-    async function getFingerprint() {
-      const userAgent = navigator.userAgent || "";
-      const screenRes = `${screen.width}x${screen.height}`;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-      const language = navigator.language || "";
-
-      let ip = "N/A";
-      try {
-        const res = await fetch("https://api.ipify.org?format=json");
-        const data = await res.json();
-        ip = data.ip;
-      } catch (e) {
-        console.warn("Gagal ambil IP:", e);
-      }
-
-      const raw = `${userAgent}|${screenRes}|${timezone}|${language}|${ip}`;
-      const deviceID = await sha256(raw);
-
-      console.log("Fingerprint raw:", raw);
-      console.log("Fingerprint deviceID:", deviceID);
-      console.log("Fingerprint ip:", ip);
-
-      return { deviceID, ip };
-    }
-
-    // Submit form
     document.getElementById("mainForm").addEventListener("submit", async e => {
       e.preventDefault();
       const formData = Object.fromEntries(new FormData(e.target).entries());
-
+    
       const fp = await getFingerprint();
       formData.deviceID = fp.deviceID;
       formData.ip = fp.ip;
-
-      console.log("Payload final:", formData);
-
+    
+      console.log("Payload yang dikirim:", formData);
+    
       const res = await fetch(apiUrl, {
         method: "POST",
         body: JSON.stringify(formData)
       });
-
+    
       const result = await res.json();
       document.getElementById("result").textContent = result.message;
       if (result.status === "success") e.target.reset();
     });
 
     loadOptions();
+
+    // fingerprint
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    
+    async function getFingerprint() {
+      const userAgent = navigator.userAgent;
+      const screenRes = `${screen.width}x${screen.height}`;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const language = navigator.language;
+    
+      let ip = "N/A";
+      try {
+        let res = await fetch("https://api.ipify.org?format=json");
+        let data = await res.json();
+        ip = data.ip;
+      } catch (e) {
+        console.warn("Gagal ambil IP:", e);
+      }
+    
+      const raw = `${userAgent}|${screenRes}|${timezone}|${language}|${ip}`;
+      const deviceID = await sha256(raw);
+
+      // tampilkan di bawah tombol
+      document.getElementById("deviceInfo").textContent = "Device ID: " + deviceID;
+
+      return { deviceID, ip };
+    }
+
+    // Jalankan sekali di awal supaya tampil langsung
+    getFingerprint();
+
+    // 🔹 Tambahkan logika disable NIP jika status = Honorer
+    document.addEventListener("change", e => {
+      if (e.target.id === "statusSelect") {
+        const nipField = document.getElementById("nipField");
+        if (e.target.value.toLowerCase() === "honorer") {
+          nipField.value = "";
+          nipField.disabled = true;
+        } else {
+          nipField.disabled = false;
+        }
+      }
+    });
   </script>
 </body>
 </html>
