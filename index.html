@@ -10,6 +10,7 @@
     select, input { width:100%; padding:8px; margin-top:5px; }
     button { margin-top:15px; padding:10px 20px; }
     #deviceBox { margin-top:20px; font-size:0.9em; color:#333; background:#f5f5f5; padding:10px; border-radius:6px; }
+    #warningBox { margin-top:10px; color:red; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -32,6 +33,7 @@
 
   <div id="result"></div>
   <div id="deviceBox">🔄 Memuat Device ID...</div>
+  <div id="warningBox"></div>
 
   <script>
     const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
@@ -85,6 +87,21 @@
       return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
+    // 🔹 cek apakah device sudah input hari ini
+    async function checkDeviceToday(deviceID) {
+      try {
+        const res = await fetch(apiUrl + "?action=checkDevice&deviceID=" + encodeURIComponent(deviceID));
+        const data = await res.json();
+        if (data.used) {
+          document.getElementById("warningBox").textContent = "⚠️ Device ini sudah melakukan input hari ini.";
+          document.querySelectorAll("#mainForm input, #mainForm select, #mainForm button")
+            .forEach(el => el.disabled = true);
+        }
+      } catch (err) {
+        console.error("checkDevice error:", err);
+      }
+    }
+
     // 🔹 generate fingerprint
     async function getFingerprint() {
       const userAgent = navigator.userAgent;
@@ -106,6 +123,10 @@
 
       // tampilkan di UI
       document.getElementById("deviceBox").textContent = `Device ID: ${deviceID} | IP: ${ip}`;
+
+      // cek ke backend
+      checkDeviceToday(deviceID);
+
       return { deviceID, ip };
     }
 
