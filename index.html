@@ -30,28 +30,37 @@
 
   <script>
     const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec"; // ganti dengan link WebApp deploy
+    // const apiUrl = "PASTE_WEB_APP_EXEC_URL_HERE"; // ganti URL /exec Anda
 
     async function loadOptions() {
-      const res = await fetch(apiUrl + "?action=getOptions");
-      const data = await res.json();
-
-      const setOptions = (name, arr) => {
-        const select = document.querySelector(`[name='${name}']`);
-        arr.forEach(val => {
-          const opt = document.createElement("option");
-          opt.value = val;
-          opt.textContent = val;
-          select.appendChild(opt);
-        });
-      };
-
-      setOptions("instansi", data.instansi);
-      setOptions("status", data.status);
-      setOptions("usia", data.usia);
-      setOptions("jabatan", data.jabatan);
-      setOptions("gender", data.gender);
-      setOptions("acara", data.acara);
+      try {
+        const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
+        const text = await res.text();
+        console.log("RAW response for getOptions:", text); // debugging: lihat apa yang dikembalikan server
+        const data = JSON.parse(text); // sekarang harus parse JSON tanpa error
+        // isi select
+        function setOptions(name, arr) {
+          const sel = document.querySelector(`[name='${name}']`);
+          if (!sel) return;
+          sel.innerHTML = "<option value=''>-- Pilih --</option>";
+          arr.forEach(v => {
+            const o = document.createElement("option");
+            o.value = v; o.textContent = v;
+            sel.appendChild(o);
+          });
+        }
+        setOptions("instansi", data.instansi || []);
+        setOptions("status", data.status || []);
+        setOptions("usia", data.usia || []);
+        setOptions("jabatan", data.jabatan || []);
+        setOptions("gender", data.gender || []);
+        setOptions("acara", data.acara || []);
+      } catch (err) {
+        console.error("loadOptions error:", err);
+        document.getElementById("result").textContent = "Gagal memuat opsi: " + err;
+      }
     }
+
 
     document.getElementById("mainForm").addEventListener("submit", async e => {
       e.preventDefault();
