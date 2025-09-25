@@ -1,79 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
-    <style>
-        .responsive-container {
-            position: relative;
-            overflow: hidden;
-        }
-        .responsive-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        -top: 0;
-                height: auto;
-            }
-            .responsive-container iframe {
-                position: static;
-                width: 100%;
-                height: 100vh;
-            }
-        }
-        .bracket {
-            padding-bottom: 100%;
-        }
-        .bracket, .top-score, .card-list {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
-            margin-bottom: 20px;
-        }
-        .bracket h2, .top-score h2, .card-list h2 {
-            margin-bottom: 15px;
-            color: #007bff;
-        }
-        .bracket table, .top-score table, .card-list table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .bracket table th, .bracket table td, .top-score table th, .top-score table td, .card-list table th, .card-list table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        .bracket table th, .top-score table th, .card-list table th {
-            background-color: #007bff;
-            color: #fff;
-        }
-        .card-icon {
-            font-size: 1.5em;
-        }
-        .yellow-card {
-            color: #e7e724;
-        }
-        .red-card {
-            color: #d30f0f;
-        }
-    </style>
-    
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
-    
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Form Pendaftaran</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    form { max-width: 400px; margin: auto; }
+    input, select, button { width: 100%; padding: 8px; margin: 6px 0; }
+    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+    button:hover { background: #45a049; }
+    #result { margin-top: 15px; font-weight: bold; }
+  </style>
 </head>
 <body>
-   <div class="responsive-container">
-       <div class="row">
-            <div class="col-lg-8 col-md-12 bracket">
-                <iframe src="https://script.google.com/macros/s/AKfycbzo5GJ_7J3_-J1UC3QqR5PiOtfGRHPwEEeD6l11IuC5DroE-am8HYpMRWdTRIqzKH-A/exec?embedded=true" frameborder="0" scrolling="auto" allowtransparency="true"></iframe>
-                <!-- <iframe src="https://challonge.com/ropbwdwi/module?show_standings=1&show_tournament_name=1" frameborder="0" scrolling="auto" allowtransparency="true"></iframe> -->
-            </div>
-        </div>
-    </div>
+
+  <h2>Form Pendaftaran</h2>
+  <form id="formData">
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="text" id="nama" placeholder="Nama" required>
+    <input type="text" id="instansi" placeholder="Instansi">
+    <input type="text" id="status" placeholder="Status">
+    <input type="text" id="nip" placeholder="NIP">
+    <input type="number" id="usia" placeholder="Usia">
+    <input type="text" id="jabatan" placeholder="Jabatan">
+    <input type="text" id="hp" placeholder="Nomor HP">
+    <select id="gender">
+      <option value="">-- Pilih Gender --</option>
+      <option value="Laki-laki">Laki-laki</option>
+      <option value="Perempuan">Perempuan</option>
+    </select>
+    <input type="text" id="acara" placeholder="Nama Acara">
+    <button type="submit">Kirim</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const scriptURL = "PASTE_URL_APPS_SCRIPT_EXEC_HERE"; // ganti URL Apps Script kamu
+
+    // Generate pseudo-deviceID (disimpan di localStorage supaya konsisten)
+    function getDeviceID() {
+      let id = localStorage.getItem("deviceID");
+      if (!id) {
+        id = "dev-" + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("deviceID", id);
+      }
+      return id;
+    }
+
+    document.getElementById("formData").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const data = {
+        deviceID: getDeviceID(),
+        email: document.getElementById("email").value,
+        nama: document.getElementById("nama").value,
+        instansi: document.getElementById("instansi").value,
+        status: document.getElementById("status").value,
+        nip: document.getElementById("nip").value,
+        usia: document.getElementById("usia").value,
+        jabatan: document.getElementById("jabatan").value,
+        hp: document.getElementById("hp").value,
+        gender: document.getElementById("gender").value,
+        acara: document.getElementById("acara").value
+      };
+
+      try {
+        let res = await fetch(scriptURL, {
+          method: "POST",
+          body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" }
+        });
+        let result = await res.json();
+        document.getElementById("result").innerHTML = result.message;
+      } catch (err) {
+        document.getElementById("result").innerHTML = "❌ Error kirim data: " + err;
+      }
+    });
+  </script>
+
 </body>
 </html>
