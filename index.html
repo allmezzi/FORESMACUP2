@@ -36,115 +36,93 @@
   <div id="warningBox"></div>
 
   <script>
-    const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
-
-    async function loadOptions() {
-      try {
-        const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
-        const data = await res.json();
-        function setOptions(name, arr) {
-          const sel = document.querySelector(`[name='${name}']`);
-          if (!sel) return;
-          sel.innerHTML = "<option value=''>-- Pilih --</option>";
-          arr.forEach(v => {
-            const o = document.createElement("option");
-            o.value = v; o.textContent = v;
-            sel.appendChild(o);
-          });
+      const apiUrl = "https://script.google.com/macros/s/AKfycbwOI8RQJuxOQb8PEq2JOeANCIXlwM_mznPS_uMteogNpOXwopu6KoCspjoaT1iDiDYj/exec";
+      
+      async function loadOptions() {
+        try {
+          const res = await fetch(apiUrl + "?action=getOptions", { cache: "no-store" });
+          const data = await res.json();
+          function setOptions(name, arr) {
+            const sel = document.querySelector(`[name='${name}']`);
+            if (!sel) return;
+            sel.innerHTML = "<option value=''>-- Pilih --</option>";
+            arr.forEach(v => { const o = document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+          }
+          setOptions("instansi", data.instansi || []);
+          setOptions("status", data.status || []);
+          setOptions("usia", data.usia || []);
+          setOptions("jabatan", data.jabatan || []);
+          setOptions("gender", data.gender || []);
+          setOptions("acara", data.acara || []);
+        } catch(err){
+          document.getElementById("result").textContent = "Gagal memuat opsi: " + err;
         }
-        setOptions("instansi", data.instansi || []);
-        setOptions("status", data.status || []);
-        setOptions("usia", data.usia || []);
-        setOptions("jabatan", data.jabatan || []);
-        setOptions("gender", data.gender || []);
-        setOptions("acara", data.acara || []);
-      } catch (err) {
-        document.getElementById("result").textContent = "Gagal memuat opsi: " + err;
       }
-    }
-
-    document.getElementById("mainForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const formData = Object.fromEntries(new FormData(e.target).entries());
-      const fp = await getFingerprint();
-      formData.deviceID = fp.deviceID;
-      formData.ip = fp.ip;
-
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        body: JSON.stringify(formData)
+      
+      async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,"0")).join("");
+      }
+      
+      async function checkDeviceToday(deviceID) {
+        try {
+          const res = await fetch(apiUrl + "?action=checkDevice&deviceID=" + encodeURIComponent(deviceID));
+          const data = await res.json();
+          if (data.used) {
+            document.getElementById("warningBox").textContent = "⚠️ Device ini sudah melakukan input hari ini.";
+            document.querySelectorAll("#mainForm input, #mainForm select, #mainForm button").forEach(el=>el.disabled=true);
+          }
+          return data.used;
+        } catch(err){
+          console.error("checkDevice error:", err);
+          return false;
+        }
+      }
+      
+      async function getFingerprint() {
+        const userAgent = navigator.userAgent;
+        const screenRes = `${screen.width}x${screen.height}`;
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const language = navigator.language;
+      
+        let ip = "N/A";
+        try {
+          let res = await fetch("https://api.ipify.org?format=json");
+          ip = (await res.json()).ip;
+        } catch(e){ console.warn("Gagal ambil IP:", e); }
+      
+        const raw = `${userAgent}|${screenRes}|${timezone}|${language}|${ip}`;
+        const deviceID = await sha256(raw);
+        document.getElementById("deviceBox").textContent = `Device ID: ${deviceID} | IP: ${ip}`;
+        checkDeviceToday(deviceID);
+        return { deviceID, ip };
+      }
+      
+      document.getElementById("mainForm").addEventListener("submit", async e=>{
+        e.preventDefault();
+        const formData = Object.fromEntries(new FormData(e.target).entries());
+        const fp = await getFingerprint();
+        formData.deviceID = fp.deviceID;
+        formData.ip = fp.ip;
+      
+        const res = await fetch(apiUrl, { method:"POST", body:JSON.stringify(formData) });
+        const result = await res.json();
+        document.getElementById("result").textContent = result.message;
+        if(result.status==="success") e.target.reset();
       });
-      const result = await res.json();
-      document.getElementById("result").textContent = result.message;
-      if (result.status === "success") e.target.reset();
-    });
-
-    // 🔹 fungsi hashing
-    async function sha256(message) {
-      const msgBuffer = new TextEncoder().encode(message);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    // 🔹 cek apakah device sudah input hari ini
-    async function checkDeviceToday(deviceID) {
-      try {
-        const res = await fetch(apiUrl + "?action=checkDevice&deviceID=" + encodeURIComponent(deviceID));
-        const data = await res.json();
-        if (data.used) {
-          document.getElementById("warningBox").textContent = "⚠️ Device ini sudah melakukan input hari ini.";
-          document.querySelectorAll("#mainForm input, #mainForm select, #mainForm button")
-            .forEach(el => el.disabled = true);
+      
+      document.addEventListener("change", e=>{
+        if(e.target.id==="statusSelect"){
+          const nipField = document.getElementById("nipField");
+          nipField.disabled = (e.target.value.toLowerCase()==="honorer");
+          if(nipField.disabled) nipField.value="";
         }
-      } catch (err) {
-        console.error("checkDevice error:", err);
-      }
-    }
-
-    // 🔹 generate fingerprint
-    async function getFingerprint() {
-      const userAgent = navigator.userAgent;
-      const screenRes = `${screen.width}x${screen.height}`;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const language = navigator.language;
-
-      let ip = "N/A";
-      try {
-        let res = await fetch("https://api.ipify.org?format=json");
-        let data = await res.json();
-        ip = data.ip;
-      } catch (e) {
-        console.warn("Gagal ambil IP:", e);
-      }
-
-      const raw = `${userAgent}|${screenRes}|${timezone}|${language}|${ip}`;
-      const deviceID = await sha256(raw);
-
-      // tampilkan di UI
-      document.getElementById("deviceBox").textContent = `Device ID: ${deviceID} | IP: ${ip}`;
-
-      // cek ke backend
-      checkDeviceToday(deviceID);
-
-      return { deviceID, ip };
-    }
-
-    // 🔹 logika disable NIP kalau status Honorer
-    document.addEventListener("change", e => {
-      if (e.target.id === "statusSelect") {
-        const nipField = document.getElementById("nipField");
-        if (e.target.value.toLowerCase() === "honorer") {
-          nipField.value = "";
-          nipField.disabled = true;
-        } else {
-          nipField.disabled = false;
-        }
-      }
-    });
-
-    loadOptions();
-    getFingerprint(); // panggil saat halaman dibuka
+      });
+      
+      loadOptions();
+      getFingerprint();
   </script>
+
 </body>
 </html>
